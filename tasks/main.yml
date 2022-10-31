@@ -1,0 +1,64 @@
+---
+- debug:
+    msg: "{{ansible_os_family}}"
+
+- name: Load OS-specific vars.
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - '{{ansible_distribution}}.yml'
+        - '{{ansible_os_family}}.yml'
+      paths:
+        - 'vars'
+
+- include_tasks: setup-debian.yml
+  when: ansible_os_family == 'Debian'
+
+- name: Install required software.
+  package:
+    name:
+      - wget
+      - openssh-server
+      - vim
+    state: present
+
+- name: Create ansible user.
+  user:
+    name: "ansible"
+    create_home: true
+    groups: "{{ ansible_user_groups }}"
+    shell: /bin/bash
+    append: true
+    state: present
+
+- name: Add ansible SSH public key.
+  authorized_key:
+    user: ansible
+    key: "{{ ansible_ssh_public_key }}"
+    manage_dir: true
+    comment: ansible
+    exclusive: true
+    state: present
+  when: ansible_ssh_public_key | length > 0
+
+- name: Set includedir in sudoers.
+  lineinfile:
+    dest: /etc/sudoers
+    line: "#includedir /etc/sudoers.d"
+    state: present
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Check ssh config.
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    line: "PubkeyAuthentication yes"
+    state: present
+  notify: "Restart sshd"
+
+- name: Ensure sshd started.
+  service:
+    name: sshd
+    enabled: true
+    state: started
+
