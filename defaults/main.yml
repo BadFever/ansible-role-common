@@ -1,2 +1,3 @@
 ---
 ansible_ssh_public_key: ""
+common_ca_certificate_path: ""

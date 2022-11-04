@@ -62,3 +62,12 @@
     enabled: true
     state: started
 
+- name: Ensure private CA certificate is present.
+  ansible.builtin.copy:
+    src: "{{ common_ca_certificate_path }}"
+    dest: "/etc/ssl/certs"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+
